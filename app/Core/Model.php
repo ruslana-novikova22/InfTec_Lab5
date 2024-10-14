@@ -1,5 +1,8 @@
 <?php
+
 namespace Core;
+
+use Core\Util;
 
 /**
  * Class Model
@@ -36,8 +39,8 @@ class Model implements DbModelInterface
      */
     public function initCollection()
     {
-        $columns = implode(',',$this->getColumns());
-        $this->sql = "select $columns from " . $this->table_name ;
+        $columns = implode(',', $this->getColumns());
+        $this->sql = "select $columns from " . $this->table_name;
         return $this;
     }
 
@@ -49,8 +52,8 @@ class Model implements DbModelInterface
         $db = new DB();
         $sql = "show columns from  $this->table_name;";
         $results = $db->query($sql);
-        foreach($results as $result) {
-            array_push($this->columns,$result['Field']);
+        foreach ($results as $result) {
+            array_push($this->columns, $result['Field']);
         }
         return $this->columns;
     }
@@ -62,10 +65,12 @@ class Model implements DbModelInterface
      */
     public function sort($params)
     {
-       /*
-              TODO
-              return $this;
-        */
+        if (count($params) > 0) {
+            $this->sql .= sprintf(
+                " order by %s",
+                Util::keyValueToList($params, "%s %s")
+            );
+        }
         return $this;
     }
 
@@ -74,11 +79,13 @@ class Model implements DbModelInterface
      */
     public function filter($params)
     {
-       /*
-              TODO
-              return $this;
-        */
-        
+        if (count($params) > 0) {
+            $this->sql .= sprintf(
+                " where %s",
+                Util::keyValueToList($params, "%s=%s")
+            );
+        }
+        return $this;
     }
 
     /**
@@ -128,17 +135,10 @@ class Model implements DbModelInterface
         $values = [];
         $columns = $this->getColumns();
         foreach ($columns as $column) {
-            /*
-            if ( isset($_POST[$column]) && $column !== $this->id_column ) {
-                $values[$column] = $_POST[$column];
-            }
-             * 
-             */
             $column_value = filter_input(INPUT_POST, $column);
-            if ($column_value && $column !== $this->id_column ) {
+            if ($column_value && $column !== $this->id_column) {
                 $values[$column] = $column_value;
             }
-
         }
         return $values;
     }
@@ -153,8 +153,35 @@ class Model implements DbModelInterface
         return $this->id_column;
     }
 
-    public function getId()
+
+    /**
+     * ERROR
+     */
+    public function getId(): int
     {
         return 1;
+    }
+
+
+    public function addItem($values)
+    {
+        $db = new DB();
+        $id = $db->createEntity($this, $values);
+        if ($id) {
+            return $this->getItem($id);
+        }
+        return null;
+    }
+
+    public function deleteItem($id)
+    {
+        $db = new DB();
+        $db->deleteEntity($this, $id);
+    }
+
+    public function saveItem($id, $values)
+    {
+        $db = new DB();
+        return  $db->updateEntity($this, $id, $values);
     }
 }
