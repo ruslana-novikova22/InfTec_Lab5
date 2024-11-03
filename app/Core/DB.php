@@ -1,8 +1,10 @@
 <?php
 
+
 namespace Core;
 
 use PDO;
+use Core\Util;
 use Core\Util;
 
 /**
@@ -23,6 +25,7 @@ class DB
     {
         if (!self::$pdo) {
             $dsn = 'mysql:host=' . MYSQL_HOST . ';port=' . MYSQL_PORT . ';dbname=' . DB_NAME . ';charset=utf8';
+            $dsn = 'mysql:host=' . MYSQL_HOST . ';port=' . MYSQL_PORT . ';dbname=' . DB_NAME . ';charset=utf8';
             $options = array(
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'",
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -30,7 +33,9 @@ class DB
             );
             try {
                 self::$pdo = new PDO($dsn, DB_USERNAME, DB_PASSWORD, $options);
+                self::$pdo = new PDO($dsn, DB_USERNAME, DB_PASSWORD, $options);
             } catch (PDOException $e) {
+                echo "Connection failed: " . $e->getMessage();
                 echo "Connection failed: " . $e->getMessage();
                 exit();
             }
@@ -51,9 +56,8 @@ class DB
 
         if ($result !== false) {
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } else {
-            return false;
         }
+        return false;
     }
 
     /**
@@ -64,8 +68,7 @@ class DB
     {
         $dbh = $this->getConnection();
         $stmt = $dbh->prepare($sql);
-        $result = $stmt->execute($parameters);
-        return $result;
+        return $stmt->execute($parameters);
     }
 
 
@@ -80,7 +83,7 @@ class DB
         );
         $statement = $dbh->prepare($sql);
 
-        $statement->execute(array($id));
+        return $statement->execute(array($id));
     }
 
     public function updateEntity(DbModelInterface $model, int $id, $values = [])
@@ -110,6 +113,19 @@ class DB
             Util::arrayToList($values, "?")
         );
         $statement = $dbh->prepare($sql);
-        return $statement->execute(array_values($values));
+
+        if ($statement->execute(array_values($values))) {
+            $sql = sprintf(
+                "SELECT %s FROM %s ORDER BY %s DESC LIMIT 1; ",
+                $model->getPrimaryKeyName(),
+                $model->getTableName(),
+                $model->getPrimaryKeyName()
+            );
+            $result = $this->query($sql);
+            if ($result){
+                return $result[0][$model->getPrimaryKeyName()];
+            }
+        }
+        return false;
     }
 }

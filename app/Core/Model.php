@@ -1,6 +1,9 @@
 <?php
 
+
 namespace Core;
+
+use Core\Util;
 
 use Core\Util;
 
@@ -41,6 +44,8 @@ class Model implements DbModelInterface
     {
         $columns = implode(',', $this->getColumns());
         $this->sql = "select $columns from " . $this->table_name;
+        $columns = implode(',', $this->getColumns());
+        $this->sql = "select $columns from " . $this->table_name;
         return $this;
     }
 
@@ -52,6 +57,8 @@ class Model implements DbModelInterface
         $db = new DB();
         $sql = "show columns from  $this->table_name;";
         $results = $db->query($sql);
+        foreach ($results as $result) {
+            array_push($this->columns, $result['Field']);
         foreach ($results as $result) {
             array_push($this->columns, $result['Field']);
         }
@@ -71,6 +78,12 @@ class Model implements DbModelInterface
                 Util::keyValueToList($params, "%s %s")
             );
         }
+        if (count($params) > 0) {
+            $this->sql .= sprintf(
+                " order by %s",
+                Util::keyValueToList($params, "%s %s")
+            );
+        }
         return $this;
     }
 
@@ -82,7 +95,7 @@ class Model implements DbModelInterface
         if (count($params) > 0) {
             $this->sql .= sprintf(
                 " where %s",
-                Util::keyValueToList($params, "%s=%s")
+                Util::keyValueToList(Util::quoteStringValues($params), "%s=%s", " and ")
             );
         }
         return $this;
@@ -166,7 +179,11 @@ class Model implements DbModelInterface
     public function addItem($values)
     {
         $db = new DB();
-        $db->createEntity($this, $values);
+        $id = $db->createEntity($this, $values);
+        if ($id) {
+            return $this->getItem($id);
+        }
+        return null;
     }
 
     public function deleteItem($id)
@@ -178,6 +195,6 @@ class Model implements DbModelInterface
     public function saveItem($id, $values)
     {
         $db = new DB();
-        $db->updateEntity($this, $id, $values);
+        return  $db->updateEntity($this, $id, $values);
     }
 }

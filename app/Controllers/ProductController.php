@@ -1,5 +1,6 @@
 <?php
 
+
 namespace Controllers;
 
 use Core\Controller;
@@ -77,9 +78,29 @@ class ProductController extends Controller
         $this->set("title", "Додавання товару");
 
         if ($values = $model->getPostValues()) {
-            $model->addItem($values);
-            $this->redirect("/product/list");
+            $newProduct = $model->addItem($values);
+            if ($newProduct){
+               $this->redirect(sprintf("/product/edit?id=%d", $newProduct["id"]));
+            }
         }
+        $this->renderLayout();
+    }
+
+    /**
+     *
+     */
+    public function deleteAction()
+    {
+        $model = $this->getModel('Product');
+        $this->set("title", "Вилучення товару");
+        $id = filter_input(INPUT_POST, 'id');
+        if ($id) {
+            $model->deleteItem($id);
+            $this->redirect('/product/list');
+            return;
+        }
+        $this->set('product', $model->getItem($this->getId()));
+
         $this->renderLayout();
     }
 
@@ -114,6 +135,12 @@ class ProductController extends Controller
             } else {
                 $params['price'] = 'ASC';
             }
+        if ($sortfirst !== "price_NONE") {
+            if ($sortfirst === "price_DESC") {
+                $params['price'] = 'DESC';
+            } else {
+                $params['price'] = 'ASC';
+            }
         }
         $sortsecond = filter_input(INPUT_POST, 'sortsecond');
         if ($sortsecond !== "qty_NONE") {
@@ -122,7 +149,14 @@ class ProductController extends Controller
             } else {
                 $params['qty'] = 'ASC';
             }
+        if ($sortsecond !== "qty_NONE") {
+            if ($sortsecond === "qty_DESC") {
+                $params['qty'] = 'DESC';
+            } else {
+                $params['qty'] = 'ASC';
+            }
         }
+
 
         return $params;
     }
